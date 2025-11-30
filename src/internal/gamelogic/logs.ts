@@ -1,7 +1,7 @@
 import { appendFile } from "fs/promises";
 
 export interface GameLog {
-  currentTime: Date;
+  timestamp: Date;
   message: string;
   username: string;
 }

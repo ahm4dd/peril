@@ -1,4 +1,4 @@
-import amqp from "amqplib";
+import amqp, { type ConfirmChannel } from "amqplib";
 import {
   clientWelcome,
   commandStatus,
@@ -6,11 +6,16 @@ import {
   printClientHelp,
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
-import { publishJSON, subscribeJSON } from "../internal/pubsub/index.js";
+import {
+  publishJSON,
+  publishMsgPack,
+  subscribeJSON,
+} from "../internal/pubsub/index.js";
 import {
   ArmyMovesPrefix,
   ExchangePerilDirect,
   ExchangePerilTopic,
+  GameLogSlug,
   PauseKey,
   WarRecognitionsPrefix,
 } from "../internal/routing/routing.js";
@@ -18,6 +23,7 @@ import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { handlerMove, handlerPause, handlerWar } from "./handlers.js";
+import type { GameLog } from "../internal/gamelogic/logs.js";
 
 async function main() {
   console.log("Starting Peril client...");
@@ -58,7 +64,7 @@ async function main() {
     `war`,
     `${WarRecognitionsPrefix}.${name}`,
     "durable",
-    handlerWar(gameState)
+    handlerWar(gameState, channel)
   );
 
   while (true) {
@@ -80,7 +86,6 @@ async function main() {
             armyMove
           );
           console.log("The move was successful");
-          channel.close();
         }
         break;
       }
@@ -102,6 +107,25 @@ async function main() {
       }
     }
   }
+}
+
+export async function publishGameLog(
+  ch: ConfirmChannel,
+  username: string,
+  message: string
+) {
+  const log: GameLog = {
+    message,
+    username,
+    timestamp: new Date(Date.now()),
+  };
+
+  await publishMsgPack(
+    ch,
+    ExchangePerilTopic,
+    `${GameLogSlug}.${log.username}`,
+    log
+  );
 }
 
 main().catch((err) => {

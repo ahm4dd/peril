@@ -15,6 +15,7 @@ import type {
 } from "../internal/gamelogic/gamestate.js";
 import { handlePause } from "../internal/gamelogic/pause.js";
 import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
+import { publishGameLog } from "./index.js";
 
 export function handlerPause(gs: GameState): (ps: PlayingState) => AckType {
   return (ps: PlayingState) => {
@@ -64,25 +65,42 @@ export function handlerMove(
 }
 
 export function handlerWar(
-  gs: GameState
+  gs: GameState,
+  ch: ConfirmChannel
 ): (rw: RecognitionOfWar) => Promise<AckType> {
   return async (rw: RecognitionOfWar) => {
     const warRes = handleWar(gs, rw);
     process.stdout.write("> ");
 
+    let username = gs.getUsername();
+    let message: string = "";
+
+    let ack: AckType = "Ack";
+
     switch (warRes.result) {
       case WarOutcome.NotInvolved:
-        return "NackRequeue";
+        ack = "NackRequeue";
+        break;
       case WarOutcome.NoUnits:
-        return "NackDiscard";
+        ack = "NackDiscard";
+        break;
       case WarOutcome.OpponentWon:
-        return "Ack";
       case WarOutcome.YouWon:
-        return "Ack";
+        message = `${warRes.winner} won a war against ${warRes.loser}`;
+        break;
       case WarOutcome.Draw:
-        return "Ack";
+        message = `A war between ${warRes.attacker} and ${warRes.defender} resulted in a draw`;
+        break;
       default:
-        return "NackDiscard";
+        ack = "NackDiscard";
+        break;
+    }
+    try {
+      await publishGameLog(ch, username, message);
+      return ack;
+    } catch (err: unknown) {
+      console.log(err);
+      return "NackRequeue";
     }
   };
 }
