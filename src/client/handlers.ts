@@ -14,6 +14,7 @@ import type {
   PlayingState,
 } from "../internal/gamelogic/gamestate.js";
 import { handlePause } from "../internal/gamelogic/pause.js";
+import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
 
 export function handlerPause(gs: GameState): (ps: PlayingState) => AckType {
   return (ps: PlayingState) => {
@@ -57,6 +58,30 @@ export function handlerMove(
       }
     } finally {
       process.stdout.write("> ");
+    }
+  };
+}
+
+export function handlerWar(
+  gs: GameState
+): (rw: RecognitionOfWar) => Promise<AckType> {
+  return async (rw: RecognitionOfWar) => {
+    const warRes = handleWar(gs, rw);
+    process.stdout.write("> ");
+
+    switch (warRes.result) {
+      case WarOutcome.NotInvolved:
+        return "NackRequeue";
+      case WarOutcome.NoUnits:
+        return "NackDiscard";
+      case WarOutcome.OpponentWon:
+        return "Ack";
+      case WarOutcome.YouWon:
+        return "Ack";
+      case WarOutcome.Draw:
+        return "Ack";
+      default:
+        return "NackDiscard";
     }
   };
 }
