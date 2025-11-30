@@ -50,8 +50,9 @@ export function handlerMove(
             );
           } catch (err) {
             console.error("Error publishing war recognition:", err);
-          } finally {
             return "NackRequeue";
+          } finally {
+            return "Ack";
           }
         default:
           return "NackDiscard";
