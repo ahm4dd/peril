@@ -1,5 +1,6 @@
 import type { ConfirmChannel, ChannelModel } from "amqplib";
 import amqp from "amqplib";
+import { encode } from "@msgpack/msgpack";
 import { ExchangeDeadLetterFanout } from "../routing/routing.js";
 
 export type SimpleQueueType = "durable" | "transient";
@@ -14,6 +15,18 @@ export async function publishJSON<T>(
   const valueJSON = JSON.stringify(value);
   ch.publish(exchange, routingKey, Buffer.from(valueJSON), {
     contentType: "application/json",
+  });
+}
+
+export async function publishMsgPack<T>(
+  ch: ConfirmChannel,
+  exchange: string,
+  routingKey: string,
+  value: T
+): Promise<void> {
+  const valueMsgPack: Uint8Array = encode(value);
+  ch.publish(exchange, routingKey, Buffer.from(valueMsgPack), {
+    contentType: "application/x-msgpack",
   });
 }
 
