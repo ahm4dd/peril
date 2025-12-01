@@ -3,6 +3,7 @@ import {
   clientWelcome,
   commandStatus,
   getInput,
+  getMaliciousLog,
   printClientHelp,
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
@@ -100,6 +101,20 @@ async function main() {
       case "quit": {
         printQuit();
         process.exit();
+      }
+      case "spam": {
+        const timesString: string | undefined = input[1];
+        if (!timesString) {
+          console.log("Specifiy a number, example: spam 10");
+          break;
+        }
+        const times = Number.parseInt(timesString);
+        console.log(times);
+        for (let i = 0; i < times; i++) {
+          const message = getMaliciousLog();
+          await publishGameLog(channel, name, message);
+        }
+        break;
       }
       default: {
         console.log("Command not found");
